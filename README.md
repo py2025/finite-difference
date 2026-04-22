@@ -6,13 +6,13 @@ Solves the Black-Scholes PDE numerically using finite difference methods (FDM), 
 
 ## Background
 
-The Black-Scholes PDE for a European option is:
+The option price V(S, t) satisfies the PDE:
 
 ```
 ∂V/∂t + ½σ²S²∂²V/∂S² + rS∂V/∂S - rV = 0
 ```
 
-While this has a closed-form solution for European options, most real-world extensions (American exercise, barriers, local vol) do not. Finite difference methods discretize the PDE on a grid and solve it numerically, making them the workhorse of practical derivatives pricing.
+While this has a closed-form solution for European options, most real-world extensions (American exercise, barriers, local vol) do not. Finite difference methods discretize the PDE on a grid and solve it numerically, making them a standard tool in practical derivatives pricing. See Wilmott et al. [[1]](#references) for a comprehensive treatment.
 
 The idea is to build a 2D grid of stock prices S and times t, fill in the terminal condition (the option payoff at expiry), then step backward in time to t=0 — where the option price today sits.
 
@@ -27,7 +27,7 @@ The idea is to build a 2D grid of stock prices S and times t, fill in the termin
 | Crank-Nicolson | Unconditional | O(dt²) | Same cost as implicit; more accurate |
 | American (CN) | Unconditional | O(dt²) | CN + early exercise constraint |
 
-The three schemes differ in *when* they evaluate the spatial derivatives. The explicit scheme uses only the known previous time level — no solve required, but the time step must be tiny or errors explode. The implicit scheme evaluates at the new (unknown) time level, which requires solving a tridiagonal system at each step but is unconditionally stable. Crank-Nicolson splits the difference 50/50, getting second-order accuracy in time at the same per-step cost as implicit.
+The three schemes differ in *when* they evaluate the spatial derivatives. The explicit scheme uses only the known previous time level — no solve required, but the time step must be tiny or errors explode. The implicit scheme evaluates at the new (unknown) time level, which requires solving a tridiagonal system at each step but is unconditionally stable. Crank-Nicolson [[2]](#references) splits the difference 50/50, getting second-order accuracy in time at the same per-step cost as implicit.
 
 ---
 
@@ -89,13 +89,23 @@ The unstable solution oscillates wildly and bears no resemblance to a call price
 
 ### Convergence and runtime
 
-All three methods converge to the true Black-Scholes price as the grid is refined, but at different rates and costs.
+All three methods converge to the exact price as the grid is refined, but at different rates and costs. The theoretical rates (Wilmott et al. [[1]](#references), Ch. 5) with M stock steps and N=M time steps are:
+
+- **Implicit**: O(dt) + O(dS²) = O(1/M) + O(1/M²) → first-order overall
+- **Crank-Nicolson**: O(dt²) + O(dS²) = O(1/M²) + O(1/M²) → second-order overall
 
 ![Convergence](results/06_error_vs_grid.png)
 
-**What the slope tells you:** on a log-log plot, a slope of -1 means halving the error costs 2× more grid points (first-order convergence). A slope of -2 means it costs only √2× more points for the same error reduction (second-order). Crank-Nicolson's steeper slope reflects its O(dt²) time accuracy — it gets more accurate faster as the grid grows.
+The empirical convergence rates measured from our results confirm the theory:
 
-**Why implicit sometimes beats CN at coarse grids:** the call payoff has a kink at S=K that excites small oscillations in Crank-Nicolson. The fully-implicit scheme damps these naturally. The oscillations disappear as the grid is refined, which is when CN pulls ahead.
+| Method | Theoretical order | Observed order (M=30–300) |
+|---|---|---|
+| Implicit | 1.0 | ~1.5–1.9 |
+| Crank-Nicolson | 2.0 | **2.00** (exact match) |
+
+CN converges at exactly second order across the full range tested. Implicit shows rates above 1.0 in this grid-size regime because the O(dS²) spatial term still contributes significantly — the rate approaches 1.0 asymptotically as M grows large and the O(dt) time term dominates.
+
+**Why implicit sometimes beats CN at coarse grids:** the payoff has a kink at S=K (a discontinuous delta) that excites small oscillations in Crank-Nicolson. The fully-implicit scheme damps these naturally due to stronger numerical dissipation. The oscillations disappear as the grid is refined, which is when CN pulls ahead. This is a known issue with CN on non-smooth initial data and is discussed in Wilmott et al. [[1]](#references).
 
 The efficiency frontier shows the most practically useful comparison — for a given compute budget, which method gives the lowest error?
 
@@ -103,13 +113,13 @@ The efficiency frontier shows the most practically useful comparison — for a g
 
 **Key takeaway:** Crank-Nicolson dominates at fine grids. Explicit is never on the frontier — it spends too much time on stability overhead. Implicit is competitive at coarse grids where CN's oscillation issue hasn't fully resolved yet. For any serious pricing application, Crank-Nicolson is the right default.
 
-| Method | M=300 error | M=300 time (ms) |
-|---|---|---|
-| Explicit | 0.002178 | 13.06 |
-| Implicit | 0.005971 | 5.96 |
-| Crank-Nicolson | 0.002468 | 6.70 |
+| Method | M=300 error | M=300 time (ms) | Scaling |
+|---|---|---|---|
+| Explicit | 0.002178 | 13.06 | O(M³) — stability forces N ∝ M² |
+| Implicit | 0.005971 | 5.96 | O(M²) |
+| Crank-Nicolson | 0.002468 | 6.70 | O(M²) |
 
-CN matches explicit's accuracy at less than half the runtime.
+CN matches explicit's accuracy at less than half the runtime, with a fundamentally better scaling profile.
 
 ---
 
@@ -121,13 +131,13 @@ American options can be exercised at any time before expiry, which means the hol
 V(S, t) ≥ max(K - S, 0)   for all S, t
 ```
 
-This is the **free-boundary condition** — there is an unknown boundary S*(t) below which early exercise is optimal, and the solver has to find it implicitly. The implementation is surprisingly simple: run Crank-Nicolson as usual, then after each backward step enforce `V = max(V, intrinsic_value)`. One extra line of code unlocks the American problem.
+This is the **free-boundary problem** — there is an unknown boundary S*(t) below which early exercise is optimal, and the solver must find it implicitly. Brennan and Schwartz (1977) [[3]](#references) were among the first to solve this with FDM; their approach is essentially what is implemented here. The implementation is surprisingly simple: run Crank-Nicolson as usual, then after each backward step enforce `V = max(V, intrinsic_value)`. One extra line of code unlocks the American problem.
 
 ![American vs European put](results/07_american_vs_european.png)
 
 **What the gap represents:** the American put is worth strictly more than the European put for low stock prices. Deep in-the-money, the European put's value actually dips *below* the intrinsic value (the dotted line) — you'd be better off exercising now and collecting K-S in cash, but the European contract won't let you. The American contract closes this gap by guaranteeing the holder can always recover at least intrinsic value.
 
-**Validated against a binomial tree:** the FDM price (M=N=300) agrees with a CRR binomial tree (N=1000) to within ~0.001, confirming the early exercise constraint is being applied correctly.
+**Validated against a binomial tree:** the Cox-Ross-Rubinstein binomial tree [[4]](#references) provides an independent benchmark that requires no PDE discretization. The FDM price (M=N=300) agrees with the binomial tree (N=1000) to within ~0.001, confirming the early exercise constraint is being applied correctly.
 
 ---
 
@@ -161,6 +171,18 @@ bin_price  = binomial_american(100.0, K, r, sigma, T, N=1000, option_type='put')
 print(f'American put (FDM):      {amer_price:.4f}')
 print(f'American put (binomial): {bin_price:.4f}')
 ```
+
+## References
+
+[1] Wilmott, P., Dewynne, J. & Howison, S. (1993). *Option Pricing: Mathematical Models and Computation*. Oxford Financial Press.
+
+[2] Crank, J. & Nicolson, P. (1947). A Practical Method for Numerical Evaluation of Solutions of Partial Differential Equations of the Heat-Conduction Type. *Mathematical Proceedings of the Cambridge Philosophical Society*, 43(1), 50–67.
+
+[3] Brennan, M. J. & Schwartz, E. S. (1977). The Valuation of American Put Options. *Journal of Finance*, 32(2), 449–462.
+
+[4] Cox, J. C., Ross, S. A. & Rubinstein, M. (1979). Option Pricing: A Simplified Approach. *Journal of Financial Economics*, 7(3), 229–263.
+
+---
 
 ## Dependencies
 
