@@ -18,7 +18,7 @@ def solve_implicit(S_max, K, r, sigma, T, M, N, option_type="call"):
     if M < 2 or N < 1:
         raise ValueError("Require M >= 2 and N >= 1")
     if option_type not in ("call", "put"):
-        raise ValueError("option_type must be 'call' or 'put'")
+        raise ValueError("option_type: 'call' or 'put'")
 
     opt = OptionParams(
         S0=0.0,
