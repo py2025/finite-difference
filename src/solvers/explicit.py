@@ -1,27 +1,11 @@
 import numpy as np
 
-from src.grid import make_stock_grid
-from src.payoff import call_payoff, put_payoff
-from src.boundary_conditions import call_boundaries, put_boundaries
-
-
-def stability_limit(S_max, K, r, sigma, T, M):
-    """
-    Maximum number of time steps N required for explicit stability.
-
-    The explicit scheme is stable only when dt <= 1 / (sigma^2*(M-1)^2 + r).
-    Returns the minimum N such that dt = T/N satisfies this bound.
-    """
-    dt_max = 1.0 / (sigma**2 * (M - 1)**2 + r)
-    return int(np.ceil(T / dt_max))
+from src.core import OptionParams, GridParams, make_stock_grid, payoff, boundary_values
 
 
 def solve_explicit(S_max, K, r, sigma, T, M, N, option_type="call"):
     """
-    Price a European option with the fully explicit finite difference method.
-
-    Each time step is a simple matrix-vector multiply — no linear solve needed.
-    Conditionally stable: requires dt <= 1 / (sigma^2*(M-1)^2 + r).
+    Price a European option with the explicit finite difference method.
 
     Returns
     -------
@@ -32,50 +16,62 @@ def solve_explicit(S_max, K, r, sigma, T, M, N, option_type="call"):
     """
     if M < 2 or N < 1:
         raise ValueError("Require M >= 2 and N >= 1")
-
-    S = make_stock_grid(S_max, M)
-    dt = T / N
-
-    if option_type == "call":
-        payoff_fn = call_payoff
-        boundary_fn = call_boundaries
-    elif option_type == "put":
-        payoff_fn = put_payoff
-        boundary_fn = put_boundaries
-    else:
+    if option_type not in ("call", "put"):
         raise ValueError("option_type must be 'call' or 'put'")
 
-    # terminal condition at tau = 0
-    V = payoff_fn(S, K)
+    opt = OptionParams(
+        S0=0.0,
+        K=K,
+        T=T,
+        r=r,
+        sigma=sigma,
+        option_type=option_type,
+        exercise_type="european",
+    )
+    grid = GridParams(S_max=S_max, M=M, N=N)
 
-    # interior nodes i = 1,...,M-1
+    S = make_stock_grid(grid)
+    dt = T / N
+
+    # terminal condition V(S,T)
+    V = payoff(S, K, option_type)
+
+    # interior node indices i = 1,...,M-1
     i = np.arange(1, M)
 
-    # explicit coefficients: V^{n+1}_i = alpha*V_{i-1} + beta*V_i + gamma*V_{i+1}
-    alpha = 0.5 * dt * (sigma**2 * i**2 - r * i)
-    beta  = 1.0 - dt * (sigma**2 * i**2 + r)
-    gamma = 0.5 * dt * (sigma**2 * i**2 + r * i)
+    a = 0.5 * dt * (sigma**2 * i**2 - r * i)
+    b = 1.0 - dt * (sigma**2 * i**2 + r)
+    c = 0.5 * dt * (sigma**2 * i**2 + r * i)
 
-    # warn if scheme is unstable
-    if np.any(beta < 0):
-        import warnings
-        worst = dt * (sigma**2 * (M - 1)**2 + r)
-        warnings.warn(
-            f"Explicit scheme is UNSTABLE (dt too large). "
-            f"Stability requires dt*(sigma^2*(M-1)^2 + r) <= 1, "
-            f"got {worst:.3f}. Use N >= {stability_limit(S_max, K, r, sigma, T, M)}."
-        )
+    # step backward from t = T to t = 0
+    for n in range(N - 1, -1, -1):
+        t = n * dt
+        left_bc, right_bc = boundary_values(t, opt, grid)
 
-    # march forward in tau from 0 to T
-    for n in range(N):
-        tau_new = (n + 1) * dt
-        lower_bc, upper_bc = boundary_fn(S_max, K, r, tau_new)
+        V_new = np.zeros_like(V)
+        V_new[0] = left_bc
+        V_new[M] = right_bc
 
-        V_new = np.empty_like(V)
-        V_new[1:M] = alpha * V[0:M-1] + beta * V[1:M] + gamma * V[2:M+1]
-        V_new[0]   = lower_bc
-        V_new[M]   = upper_bc
+        V_new[1:M] = a * V[0:M-1] + b * V[1:M] + c * V[2:M+1]
 
         V = V_new
 
     return S, V
+
+def stability_limit(T, r, sigma, M):
+    """
+    Minimum N such that the explicit scheme satisfies
+
+        dt * (sigma^2 * (M-1)^2 + r) <= 1
+
+    with dt = T / N.
+    """
+    if M < 2:
+        raise ValueError("M >= 2")
+    if T < 0:
+        raise ValueError("T >= 0")
+    if sigma < 0:
+        raise ValueError("sigma >= 0")
+
+    dt_max = 1.0 / (sigma**2 * (M - 1)**2 + r)
+    return int(np.ceil(T / dt_max))
