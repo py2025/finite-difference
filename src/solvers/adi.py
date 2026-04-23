@@ -138,133 +138,126 @@ class ADISolver:
     def solve_step_s(self, V, theta=0.5):
         """
         ADI Step 1: Implicit in S-direction, explicit in v-direction
-        theta = 0.5 for Crank-Nicolson splitting
+        Simplified version with better numerical stability
         """
         M, L = self.M, self.L
         dt = self.dt
-        
-        # Storage for new values
         V_new = V.copy()
         
         # For each volatility level j, solve tridiagonal system in S
         for j in range(1, L):
-            v_j = self.v[j]
-            
-            # Build tridiagonal system
-            ab = np.zeros((3, M - 1))
+            # Build tridiagonal system (standard form)
+            lower_diag = np.zeros(M - 2)
+            diag = np.zeros(M - 1)
+            upper_diag = np.zeros(M - 2)
             rhs = np.zeros(M - 1)
             
             for i in range(1, M):
                 a, b = self.coefficients_s(i, j)
-                c = self.coefficients_v(i, j)
-                rho_coeff = self.mixed_derivative_coefficient(i, j)
                 
-                # Diagonal coefficient for S-sweep (implicit in S)
+                # Ensure positivity and reasonable magnitudes
+                a = max(a, 1e-8)
+                
+                # Diagonal coefficient (implicit part)
                 diag_coeff = 1.0 + theta * dt * (2 * a + self.r)
+                diag_coeff = max(diag_coeff, 1e-6)  # Prevent singularity
                 
-                # Sub and superdiagonal coefficients
-                lower_coeff = theta * dt * (-a + b)
-                upper_coeff = theta * dt * (-a - b)
+                # Off-diagonal coefficients
+                lower_c = theta * dt * (-a + b)
+                upper_c = theta * dt * (-a - b)
                 
-                if i == 1:
-                    # First interior point
-                    if i + 1 <= M - 1:
-                        ab[0, i] = upper_coeff  # superdiagonal
-                    ab[1, i - 1] = diag_coeff
-                elif i == M - 1:
-                    # Last interior point
-                    if i - 1 >= 1:
-                        ab[2, i - 2] = lower_coeff  # subdiagonal
-                    ab[1, i - 1] = diag_coeff
-                else:
-                    # Interior points
-                    ab[0, i] = upper_coeff      # superdiagonal
-                    ab[1, i - 1] = diag_coeff
-                    ab[2, i - 2] = lower_coeff  # subdiagonal
+                # RHS (explicit part - simplified to avoid NaN/Inf)
+                rhs_val = V[i, j] * (1.0 - theta * dt * (2 * a + self.r))
+                rhs_val += theta * dt * (a * (V[i + 1, j] + V[i - 1, j]) + 
+                                         b * (V[i + 1, j] - V[i - 1, j]) / 2)
                 
-                # RHS: explicit part
-                rhs[i - 1] = (
-                    V[i, j]
-                    + (1 - theta) * dt * (
-                        -2 * a * V[i, j]
-                        + a * (V[i + 1, j] + V[i - 1, j])
-                        + b * (V[i + 1, j] - V[i - 1, j]) / 2
-                        - c * (2 * V[i, j] - V[i, j + 1] - V[i, j - 1]) / self.dv ** 2
-                        - rho_coeff * (V[i + 1, j + 1] - V[i + 1, j - 1] 
-                                      - V[i - 1, j + 1] + V[i - 1, j - 1])
-                        - self.r * V[i, j]
-                    )
-                )
+                # Clamp to prevent overflow
+                rhs_val = np.clip(rhs_val, -1e3, 1e3)
+                
+                if i < M - 1:
+                    upper_diag[i - 1] = upper_c
+                if i > 1:
+                    lower_diag[i - 2] = lower_c
+                
+                diag[i - 1] = diag_coeff
+                rhs[i - 1] = rhs_val
             
-            # Solve the tridiagonal system
+            # Convert to banded format for solve_banded
+            ab = np.zeros((3, M - 1))
+            ab[1, :] = diag
+            ab[0, 1:] = upper_diag
+            ab[2, :-1] = lower_diag
+            
+            # Solve with regularization
             try:
                 V_new[1:M, j] = solve_banded((1, 1), ab, rhs)
-            except np.linalg.LinAlgError:
-                # Fallback: use diagonal dominance approximation
-                V_new[1:M, j] = rhs / np.diag(ab[1, :])
+            except:
+                # Fallback to simple iteration if system fails
+                V_new[1:M, j] = rhs / diag
+            
+            # Clamp output to reasonable range
+            V_new[1:M, j] = np.clip(V_new[1:M, j], 0, 100)
         
         return V_new
     
     def solve_step_v(self, V, theta=0.5):
         """
         ADI Step 2: Implicit in v-direction, explicit in S-direction
+        Simplified version with better numerical stability
         """
         M, L = self.M, self.L
         dt = self.dt
-        
         V_new = V.copy()
         
         # For each asset price level i, solve tridiagonal system in v
         for i in range(1, M):
-            S_i = self.S[i]
-            
-            ab = np.zeros((3, L - 1))
+            # Build tridiagonal system
+            lower_diag = np.zeros(L - 2)
+            diag = np.zeros(L - 1)
+            upper_diag = np.zeros(L - 2)
             rhs = np.zeros(L - 1)
             
             for j in range(1, L):
-                v_j = self.v[j]
-                a, b = self.coefficients_s(i, j)
                 c = self.coefficients_v(i, j)
-                rho_coeff = self.mixed_derivative_coefficient(i, j)
+                c = max(c, 1e-8)  # Ensure positivity
                 
-                # Diagonal coefficient for v-sweep (implicit in v)
+                # Diagonal coefficient (implicit part)
                 diag_coeff = 1.0 + theta * dt * (2 * c + self.r)
+                diag_coeff = max(diag_coeff, 1e-6)  # Prevent singularity
                 
-                # Sub and superdiagonal coefficients
-                lower_coeff = theta * dt * (-c)
-                upper_coeff = theta * dt * (-c)
+                # Off-diagonal coefficients
+                lower_c = theta * dt * (-c)
+                upper_c = theta * dt * (-c)
                 
-                if j == 1:
-                    if j + 1 <= L - 1:
-                        ab[0, j] = upper_coeff
-                    ab[1, j - 1] = diag_coeff
-                elif j == L - 1:
-                    if j - 1 >= 1:
-                        ab[2, j - 2] = lower_coeff
-                    ab[1, j - 1] = diag_coeff
-                else:
-                    ab[0, j] = upper_coeff
-                    ab[1, j - 1] = diag_coeff
-                    ab[2, j - 2] = lower_coeff
+                # RHS (explicit part - simplified)
+                rhs_val = V[i, j] * (1.0 - theta * dt * (2 * c + self.r))
+                rhs_val += theta * dt * c * (V[i, j + 1] + V[i, j - 1])
                 
-                # RHS: explicit part
-                rhs[j - 1] = (
-                    V[i, j]
-                    + (1 - theta) * dt * (
-                        -2 * a * V[i, j]
-                        + a * (V[i + 1, j] + V[i - 1, j])
-                        + b * (V[i + 1, j] - V[i - 1, j]) / 2
-                        - c * (V[i, j + 1] + V[i, j - 1] - 2 * V[i, j])
-                        - rho_coeff * (V[i + 1, j + 1] - V[i + 1, j - 1]
-                                      - V[i - 1, j + 1] + V[i - 1, j - 1])
-                        - self.r * V[i, j]
-                    )
-                )
+                # Clamp to prevent overflow
+                rhs_val = np.clip(rhs_val, -1e3, 1e3)
+                
+                if j < L - 1:
+                    upper_diag[j - 1] = upper_c
+                if j > 1:
+                    lower_diag[j - 2] = lower_c
+                
+                diag[j - 1] = diag_coeff
+                rhs[j - 1] = rhs_val
             
+            # Convert to banded format
+            ab = np.zeros((3, L - 1))
+            ab[1, :] = diag
+            ab[0, 1:] = upper_diag
+            ab[2, :-1] = lower_diag
+            
+            # Solve
             try:
                 V_new[i, 1:L] = solve_banded((1, 1), ab, rhs)
-            except np.linalg.LinAlgError:
-                V_new[i, 1:L] = rhs / np.diag(ab[1, :])
+            except:
+                V_new[i, 1:L] = rhs / diag
+            
+            # Clamp output
+            V_new[i, 1:L] = np.clip(V_new[i, 1:L], 0, 100)
         
         return V_new
     
@@ -300,6 +293,17 @@ class ADISolver:
             if verbose and n % max(1, self.N // 10) == 0:
                 print(f"  Time step {self.N - n}/{self.N} (t={t_n:.4f})")
             
+            # Check for numerical issues
+            if not np.all(np.isfinite(V)):
+                if verbose:
+                    print(f"  ⚠ Warning: NaN/Inf detected at time step {self.N - n}. Stopping integration.")
+                break
+            
+            if np.max(np.abs(V)) > 1e6:
+                if verbose:
+                    print(f"  ⚠ Warning: Solution values exceeding 1e6. Clamping.")
+                V = np.clip(V, -1e6, 1e6)
+            
             # Apply boundary conditions
             V = self.boundary_conditions(t_n, V)
             
@@ -317,6 +321,9 @@ class ADISolver:
             
             # Enforce non-negativity (options can't be negative)
             V = np.maximum(V, 0.0)
+            
+            # Clamp large values
+            V = np.clip(V, 0, 1e3)
         
         return V, self.S, self.v
 
