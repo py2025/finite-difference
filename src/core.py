@@ -20,12 +20,6 @@ class GridParams:
 
 @dataclass
 class SABRParams:
-    """
-    SABR (Stochastic Alpha-Beta-Rho) Model Parameters
-    dS = alpha * S^beta * v * dW_S
-    dv = nu * v * dW_v
-    with correlation rho between dW_S and dW_v
-    """
     alpha: float  # volatility of volatility (0 to infty, typically 0.1-1.0)
     beta: float   # elasticity (0 to 1, CEV parameter; 0=normal, 1=lognormal)
     rho: float    # correlation between asset and volatility ([-1, 1])
@@ -43,7 +37,6 @@ class SABRParams:
 
 @dataclass
 class Grid2DParams:
-    """2D grid parameters for asset price and volatility"""
     S_max: float
     v_max: float
     M: int  # asset price steps
