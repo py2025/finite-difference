@@ -18,6 +18,38 @@ class GridParams:
     M: int  # stock steps
     N: int  # time steps
 
+@dataclass
+class SABRParams:
+    """
+    SABR (Stochastic Alpha-Beta-Rho) Model Parameters
+    dS = alpha * S^beta * v * dW_S
+    dv = nu * v * dW_v
+    with correlation rho between dW_S and dW_v
+    """
+    alpha: float  # volatility of volatility (0 to infty, typically 0.1-1.0)
+    beta: float   # elasticity (0 to 1, CEV parameter; 0=normal, 1=lognormal)
+    rho: float    # correlation between asset and volatility ([-1, 1])
+    nu: float     # volatility of volatility (0 to infty, typically 0.1-1.0)
+    
+    def __post_init__(self):
+        if not (0 <= self.beta <= 1):
+            raise ValueError("beta must be in [0, 1]")
+        if not (-1 <= self.rho <= 1):
+            raise ValueError("rho must be in [-1, 1]")
+        if self.alpha <= 0:
+            raise ValueError("alpha must be positive")
+        if self.nu <= 0:
+            raise ValueError("nu must be positive")
+
+@dataclass
+class Grid2DParams:
+    """2D grid parameters for asset price and volatility"""
+    S_max: float
+    v_max: float
+    M: int  # asset price steps
+    L: int  # volatility steps
+    N: int  # time steps
+
 # Assertions
 def validate_option_params(opt: OptionParams) -> None:
     if opt.S0 < 0:
@@ -41,6 +73,18 @@ def validate_grid_params(grid: GridParams) -> None:
     if grid.N < 1:
         raise ValueError("N >= 1")
 
+def validate_grid2d_params(grid: Grid2DParams) -> None:
+    if grid.S_max <= 0:
+        raise ValueError("S_max > 0")
+    if grid.v_max <= 0:
+        raise ValueError("v_max > 0")
+    if grid.M < 2:
+        raise ValueError("M >= 2")
+    if grid.L < 2:
+        raise ValueError("L >= 2")
+    if grid.N < 1:
+        raise ValueError("N >= 1")
+
 # Grid Builder
 def make_stock_grid(grid: GridParams) -> np.ndarray:
     return np.linspace(0.0, grid.S_max, grid.M + 1)
@@ -50,6 +94,27 @@ def ds(grid: GridParams) -> float:
 
 def dt(opt: OptionParams, grid: GridParams) -> float:
     return opt.T / grid.N
+
+# 2D Grid Builders (for SABR model)
+def make_stock_grid_2d(grid: Grid2DParams) -> np.ndarray:
+    """Stock price grid for 2D problems"""
+    return np.linspace(0.0, grid.S_max, grid.M + 1)
+
+def make_vol_grid_2d(grid: Grid2DParams) -> np.ndarray:
+    """Volatility grid for 2D problems"""
+    return np.linspace(0.0, grid.v_max, grid.L + 1)
+
+def ds_2d(grid: Grid2DParams) -> float:
+    """Stock price grid spacing"""
+    return grid.S_max / grid.M
+
+def dv_2d(grid: Grid2DParams) -> float:
+    """Volatility grid spacing"""
+    return grid.v_max / grid.L
+
+def dt_2d(T: float, grid: Grid2DParams) -> float:
+    """Time step"""
+    return T / grid.N
 
 # Value Functions
 def payoff(S, K, option_type="put"):
