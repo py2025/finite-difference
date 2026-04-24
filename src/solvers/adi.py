@@ -81,9 +81,9 @@ class ADISolver:
             V[self.M, :] = 0.0
         
         if self.option_type == "call":
-            V[:, 0] = np.maximum(self.S * np.exp(self.r * tau) - self.K * np.exp(-self.r * tau), 0.0)
+            V[:, 0] = np.maximum(self.S - self.K * np.exp(-self.r * tau), 0.0)
         else:
-            V[:, 0] = np.maximum(self.K * np.exp(-self.r * tau) - self.S * np.exp(self.r * tau), 0.0)
+            V[:, 0] = np.maximum(self.K * np.exp(-self.r * tau) - self.S, 0.0)
         
         V[:, self.L] = V[:, self.L - 1]
         
@@ -97,7 +97,7 @@ class ADISolver:
         S_i = self.S[i]
         v_j = self.v[j]
         
-        sigma_ij = self.sabr.alpha * (S_i ** self.sabr.beta) * v_j
+        sigma_ij = (S_i ** self.sabr.beta) * v_j
         
         a_coeff = (sigma_ij ** 2) / (2 * self.dS ** 2)
         b_coeff = (self.r * S_i) / (2 * self.dS)
@@ -119,10 +119,40 @@ class ADISolver:
         S_i = self.S[i]
         v_j = self.v[j]
         
-        rho_coeff = (self.sabr.rho * self.sabr.alpha * self.sabr.nu * 
-                     (S_i ** self.sabr.beta) * v_j ** 2) / (4 * self.dS * self.dv)
+        rho_coeff = (self.sabr.rho * self.sabr.nu *
+             (S_i ** self.sabr.beta) * v_j ** 2) / (4 * self.dS * self.dv)
         
         return rho_coeff
+    
+    def interpolate_price(self, V, S0, v0):
+        """
+        Bilinear interpolation of the price surface at (S0, v0).
+        """
+        i = np.searchsorted(self.S, S0)
+        j = np.searchsorted(self.v, v0)
+
+        i = min(max(i, 1), len(self.S) - 1)
+        j = min(max(j, 1), len(self.v) - 1)
+
+        S_lo, S_hi = self.S[i - 1], self.S[i]
+        v_lo, v_hi = self.v[j - 1], self.v[j]
+
+        if S_hi == S_lo:
+            wS = 0.0
+        else:
+            wS = (S0 - S_lo) / (S_hi - S_lo)
+
+        if v_hi == v_lo:
+            wv = 0.0
+        else:
+            wv = (v0 - v_lo) / (v_hi - v_lo)
+
+        return (
+            (1 - wS) * (1 - wv) * V[i - 1, j - 1]
+            + wS * (1 - wv) * V[i, j - 1]
+            + (1 - wS) * wv * V[i - 1, j]
+            + wS * wv * V[i, j]
+        )
     
     def solve_step_s(self, V, theta=0.5):
         """
@@ -343,7 +373,7 @@ def price_sabr_option(S0: float, K: float, T: float, r: float,
     if S_max is None:
         S_max = K * 3
     if v_max is None:
-        v_max = alpha * S0 * 3
+        v_max = max(1.0, 4.0 * alpha)
     
     sabr = SABRParams(alpha=alpha, beta=beta, rho=rho, nu=nu)
     grid = Grid2DParams(S_max=S_max, v_max=v_max, M=M, L=L, N=N)
@@ -357,28 +387,8 @@ def price_sabr_option(S0: float, K: float, T: float, r: float,
         print(f"  Grid: M={M}, L={L}, N={N}")
     
     V, S, v = solver.solve(verbose=verbose)
-    
+
     v0 = alpha
-    idx_S = np.searchsorted(S, S0)
-    idx_v = np.searchsorted(v, v0)
-    
-    if idx_S >= len(S) or idx_v >= len(v):
-        price = V[-1, -1]
-    else:
-        if idx_S > 0 and idx_S < len(S) - 1 and idx_v > 0 and idx_v < len(v) - 1:
-            S_lo, S_hi = S[idx_S - 1], S[idx_S]
-            v_lo, v_hi = v[idx_v - 1], v[idx_v]
-            
-            w_S = (S0 - S_lo) / (S_hi - S_lo)
-            w_v = (v0 - v_lo) / (v_hi - v_lo)
-            
-            price = (
-                (1 - w_S) * (1 - w_v) * V[idx_S - 1, idx_v - 1]
-                + w_S * (1 - w_v) * V[idx_S, idx_v - 1]
-                + (1 - w_S) * w_v * V[idx_S - 1, idx_v]
-                + w_S * w_v * V[idx_S, idx_v]
-            )
-        else:
-            price = V[idx_S, idx_v]
-    
+    price = solver.interpolate_price(V, S0, v0)
+
     return price, V, S, v
