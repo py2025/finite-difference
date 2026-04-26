@@ -20,10 +20,10 @@ class GridParams:
 
 @dataclass
 class SABRParams:
-    alpha: float  # volatility of volatility (0 to infty, typically 0.1-1.0)
+    alpha: float  # initial volatility level sigma_0 used as v0 in this implementation
     beta: float   # elasticity (0 to 1, CEV parameter; 0=normal, 1=lognormal)
     rho: float    # correlation between asset and volatility ([-1, 1])
-    nu: float     # volatility of volatility (0 to infty, typically 0.1-1.0)
+    nu: float     # volatility of volatility
     
     def __post_init__(self):
         if not (0 <= self.beta <= 1):
