@@ -7,7 +7,7 @@ name = "finite-difference"
 version = "0.1.0"
 description = "Finite-difference option pricing in 1-D (Black-Scholes) and 2-D (SABR) with a Douglas-scheme ADI solver."
 readme = "README.md"
-license = { text = "MIT" }
+license-files = ["LICENSE"]
 requires-python = ">=3.8"
 authors = [
     { name = " Derek Xu, Oisin Kehoe, Paul Yang, Alexander Tretska, Michael Cusack-Nelkin" },
