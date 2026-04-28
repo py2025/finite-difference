@@ -1,18 +1,15 @@
 """
 Tests for the American option solver.
 
-Two genuinely strong tests here:
+Automates the validation checks already demonstrated visually in
+notebook 07_american_put.ipynb (binomial cross-check, American vs
+European comparison) so a refactor can't silently regress them.
 
-  1. American >= European  — early exercise can never reduce value.
-     A sign error in the projection step or a missing max() call
-     fails this immediately.
-
-  2. American put = binomial tree — two completely independent
-     algorithms (Crank-Nicolson + projection vs. Cox-Ross-Rubinstein
-     lattice) on the same model.  They only agree if both are right.
-
-Plus the textbook result that an American CALL on a non-dividend stock
-equals the European call — an easy thing to break with a buggy projection.
+  1. American >= European pointwise — early exercise can never reduce value.
+  2. American put agrees with the Cox-Ross-Rubinstein binomial tree
+     across three moneyness regimes.
+  3. American call on a non-dividend stock equals the European call
+     (textbook result; a buggy projection would break it).
 """
 
 import numpy as np
