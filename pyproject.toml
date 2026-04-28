@@ -7,7 +7,7 @@ name = "finite-difference"
 version = "0.1.0"
 description = "Finite-difference option pricing in 1-D (Black-Scholes) and 2-D (SABR) with a Douglas-scheme ADI solver."
 readme = "README.md"
-license = { text = "MIT" }
+license-files = ["LICENSE"]
 requires-python = ">=3.8"
 authors = [
     { name = " Derek Xu, Oisin Kehoe, Paul Yang, Alexander Tretska, Michael Cusack-Nelkin" },
@@ -62,13 +62,17 @@ Issues = "https://github.com/py2025/finite-difference/issues"
 # ---------------------------------------------------------------------------
 # Package discovery
 #
-# The current source layout uses `src/` as the importable package itself
-# (modules import as `from src.core import ...`).  We therefore tell setuptools
-# to treat `src` as a top-level package rather than as a `src/` layout root.
+# The repository uses a flat layout: `finite_difference/` is the importable
+# top-level Python package, so users import modules with:
+#
+#     from finite_difference import ...
+#
+# We therefore ask setuptools to find packages from the repository root and
+# include only `finite_difference` and its subpackages.
 # ---------------------------------------------------------------------------
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["finite_difference*"]
 exclude = ["notebooks*", "results*", "images*", "tests*"]
 
 # ---------------------------------------------------------------------------

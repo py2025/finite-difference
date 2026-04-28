@@ -16,8 +16,7 @@ parameter and isn't exercised by any notebook.
 import numpy as np
 import pytest
 
-from src.core import SABRParams, bs_price
-from src.solvers.adi import price_sabr_option
+from finite_difference import SABRParams, bs_price, price_sabr_option
 
 
 def test_sabr_collapses_to_black_scholes():

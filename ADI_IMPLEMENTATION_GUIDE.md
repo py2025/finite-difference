@@ -39,7 +39,7 @@ The core implementation that:
 ## Key Files
 
 ```
-src/
+finite_difference/
 ├── core.py                      # Extended with SABR/2D support
 │   ├── SABRParams dataclass
 │   ├── Grid2DParams dataclass
@@ -107,7 +107,7 @@ Each step reduces to solving L+1 or M+1 independent tridiagonal systems.
 
 ### Basic Pricing
 ```python
-from src.solvers.adi import price_sabr_option
+from finite_difference import price_sabr_option
 
 # Price a call option
 price, V, S, v = price_sabr_option(
@@ -126,8 +126,7 @@ print(f"Price: {price:.4f}")
 
 ### Advanced Usage
 ```python
-from src.core import SABRParams, Grid2DParams
-from src.solvers.adi import ADISolver
+from finite_difference import SABRParams, Grid2DParams, ADISolver
 
 sabr = SABRParams(alpha=0.2, beta=1.0, rho=-0.5, nu=0.3)
 grid = Grid2DParams(S_max=300, v_max=0.6, M=60, L=40, N=60)
@@ -197,13 +196,13 @@ Potential additions:
 
 ## Files Modified
 
-### `src/core.py`
+### `finite_difference/core.py`
 - Added `SABRParams` dataclass (27 lines)
 - Added `Grid2DParams` dataclass (6 lines)
 - Added validation functions (18 lines)
 - Added 2D grid builders and utilities (26 lines)
 
-### `src/solvers/adi.py` (NEW)
+### `finite_difference/solvers/adi.py` (NEW)
 - `ADISolver` class: 400+ lines
 - `price_sabr_option()` function: 80+ lines
 - Comprehensive docstrings

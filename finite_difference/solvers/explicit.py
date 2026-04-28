@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.core import OptionParams, GridParams, make_stock_grid, payoff, boundary_values
+from ..core import OptionParams, GridParams, make_stock_grid, payoff, boundary_values
 
 
 def solve_explicit(S_max, K, r, sigma, T, M, N, option_type="call"):

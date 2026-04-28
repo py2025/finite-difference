@@ -15,8 +15,7 @@ European comparison) so a refactor can't silently regress them.
 import numpy as np
 import pytest
 
-from src.solvers.american import binomial_american, solve_american
-from src.solvers.crank_nicolson import solve_crank_nicolson
+from finite_difference import binomial_american, solve_american, solve_crank_nicolson
 
 
 def _interp_at(S, V, S0):

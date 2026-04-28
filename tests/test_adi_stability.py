@@ -8,8 +8,7 @@ sys.path.insert(0, '/root/project' if '/root' in sys.prefix else '.')
 
 import numpy as np
 import time
-from src.core import SABRParams, Grid2DParams
-from src.solvers.adi import ADISolver, price_sabr_option
+from finite_difference import SABRParams, Grid2DParams, ADISolver, price_sabr_option
 
 print("=" * 70)
 print("ADI SOLVER STABILITY TEST")

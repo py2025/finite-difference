@@ -9,10 +9,7 @@ convergence check that catches a regression from O(dt^2) to O(dt).
 import numpy as np
 import pytest
 
-from src.core import bs_price
-from src.solvers.crank_nicolson import solve_crank_nicolson
-from src.solvers.explicit import solve_explicit, stability_limit
-from src.solvers.implicit import solve_implicit
+from finite_difference import bs_price, solve_crank_nicolson, solve_explicit, stability_limit, solve_implicit
 
 
 def _interp_at(S, V, S0):

@@ -27,7 +27,7 @@ jupyter notebook
 ## Example: Price a SABR Option
 
 ```python
-from src.solvers.adi import price_sabr_option
+from finite_difference import price_sabr_option
 
 # Example parameters (typical for equity options)
 price, V, S, v = price_sabr_option(
@@ -112,8 +112,7 @@ v[-1]        # v_max
 ### Direct Solver Interface
 
 ```python
-from src.core import SABRParams, Grid2DParams
-from src.solvers.adi import ADISolver
+from finite_difference import SABRParams, Grid2DParams, ADISolver
 
 # Define parameters
 sabr = SABRParams(
@@ -197,7 +196,7 @@ print(f"Monotonicity check: {is_increasing}")
 
 For low vol-of-vol, SABR → Black-Scholes:
 ```python
-from src.core import bs_price
+from finite_difference import bs_price
 
 # SABR with tiny vol-of-vol
 price_sabr, _, _, _ = price_sabr_option(
@@ -265,7 +264,7 @@ price_sabr_option(..., M=40, L=25, N=40)
   ├─ README.md (overview)
   ├─ ADI_IMPLEMENTATION_GUIDE.md (detailed)
   ├─ QUICK_START.md (this file)
-  ├─ src/
+  ├─ finite_difference/
   │   ├─ core.py (data structures)
   │   └─ solvers/adi.py (main algorithm)
   └─ notebooks/

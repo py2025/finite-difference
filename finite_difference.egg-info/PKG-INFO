@@ -1,3 +1,41 @@
+Metadata-Version: 2.4
+Name: finite-difference
+Version: 0.1.0
+Summary: Finite-difference option pricing in 1-D (Black-Scholes) and 2-D (SABR) with a Douglas-scheme ADI solver.
+Author:  Derek Xu, Oisin Kehoe, Paul Yang, Alexander Tretska, Michael Cusack-Nelkin
+License: MIT
+Project-URL: Homepage, https://github.com/py2025/finite-difference
+Project-URL: Repository, https://github.com/py2025/finite-difference
+Project-URL: Issues, https://github.com/py2025/finite-difference/issues
+Keywords: finance,options,black-scholes,sabr,finite-difference,adi,pde,quantitative-finance
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Classifier: Topic :: Office/Business :: Financial
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20
+Requires-Dist: scipy>=1.7
+Provides-Extra: notebooks
+Requires-Dist: matplotlib>=3.4; extra == "notebooks"
+Requires-Dist: pandas>=1.3; extra == "notebooks"
+Requires-Dist: jupyter>=1.0; extra == "notebooks"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: ruff>=0.1; extra == "dev"
+Dynamic: license-file
+
 # finite-difference
 
 Finite-difference option pricing for the SABR stochastic-volatility model via the **Douglas-scheme ADI method** of in 't Hout & Foulon (2010).
