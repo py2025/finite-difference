@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.linalg import solve_banded
 
-from src.core import OptionParams, GridParams, make_stock_grid, payoff, boundary_values
-
+from ..core import OptionParams, GridParams, make_stock_grid, payoff, boundary_values
 
 def solve_american(S_max, K, r, sigma, T, M, N, option_type="put"):
     """

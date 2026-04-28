@@ -24,7 +24,7 @@ for option pricing in the Heston model with correlation".
 
 import numpy as np
 
-from src.core import (
+from ..core import (
     SABRParams,
     Grid2DParams,
     make_stock_grid_2d,

@@ -68,7 +68,7 @@ Issues = "https://github.com/py2025/finite-difference/issues"
 # ---------------------------------------------------------------------------
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["finite_difference*"]
 exclude = ["notebooks*", "results*", "images*", "tests*"]
 
 # ---------------------------------------------------------------------------
