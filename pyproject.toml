@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finite-difference"
+version = "0.1.0"
+description = "Finite-difference option pricing in 1-D (Black-Scholes) and 2-D (SABR) with a Douglas-scheme ADI solver."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+authors = [
+    { name = "Your Name" },
+]
+keywords = [
+    "finance",
+    "options",
+    "black-scholes",
+    "sabr",
+    "finite-difference",
+    "adi",
+    "pde",
+    "quantitative-finance",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "numpy>=1.20",
+    "scipy>=1.7",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "matplotlib>=3.4",
+    "pandas>=1.3",
+    "jupyter>=1.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/py2025/finite-difference"
+Repository = "https://github.com/py2025/finite-difference"
+Issues = "https://github.com/py2025/finite-difference/issues"
+
+# ---------------------------------------------------------------------------
+# Package discovery
+#
+# The current source layout uses `src/` as the importable package itself
+# (modules import as `from src.core import ...`).  We therefore tell setuptools
+# to treat `src` as a top-level package rather than as a `src/` layout root.
+# ---------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+exclude = ["notebooks*", "results*", "images*", "tests*"]
+
+# ---------------------------------------------------------------------------
+# Tooling
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
