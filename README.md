@@ -89,4 +89,4 @@ MIT.
 
 Full SABR/ADI tutorial — derivation, solver, surface plots, convergence study, parity check, parameter sensitivity, and the implied-volatility smile — is in [`notebooks/07_sabr_adi.ipynb`](notebooks/07_sabr_adi.ipynb).
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USER/YOUR_REPO/blob/main/notebooks/07_sabr_adi.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/py2025/finite-difference/blob/AGT_v0/notebooks/07_sabr_adi.ipynb)
