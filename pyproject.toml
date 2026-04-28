@@ -62,9 +62,13 @@ Issues = "https://github.com/py2025/finite-difference/issues"
 # ---------------------------------------------------------------------------
 # Package discovery
 #
-# The current source layout uses `src/` as the importable package itself
-# (modules import as `from src.core import ...`).  We therefore tell setuptools
-# to treat `src` as a top-level package rather than as a `src/` layout root.
+# The repository uses a flat layout: `finite_difference/` is the importable
+# top-level Python package, so users import modules with:
+#
+#     from finite_difference import ...
+#
+# We therefore ask setuptools to find packages from the repository root and
+# include only `finite_difference` and its subpackages.
 # ---------------------------------------------------------------------------
 [tool.setuptools.packages.find]
 where = ["."]

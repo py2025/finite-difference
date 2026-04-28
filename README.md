@@ -20,7 +20,7 @@ pip install mafn-finite-difference
 ## Quick start
 
 ```python
-from src.solvers.adi import price_sabr_option
+from finite_difference import price_sabr_option
 
 # 1-year ATM SABR call: alpha=0.2, beta=1, rho=-0.3, nu=0.4
 price, V, S, v = price_sabr_option(
@@ -68,7 +68,7 @@ Lower-level access. Call `solve(theta=0.5, verbose=False)` to get the full `(V, 
 
 ### 1-D Black–Scholes solvers
 
-In `src/solvers/`. Each takes `(S_max, K, r, sigma, T, M, N, option_type)` and returns `(S, V)` at `t = 0`.
+In `finite_difference/solvers/`. Each takes `(S_max, K, r, sigma, T, M, N, option_type)` and returns `(S, V)` at `t = 0`.
 
 | Function | Module | Notes |
 |----------|--------|-------|

@@ -9,7 +9,7 @@ import math
 
 import pytest
 
-from src.core import bs_price
+from finite_difference import bs_price
 
 
 def test_put_call_parity(parity_case):
