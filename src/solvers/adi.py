@@ -204,6 +204,9 @@ class ADISolver:
     # ------------------------------------------------------------------
 
     def step(self, V, tau_old, tau_new, theta=0.5):
+        # AGT: theta is the Douglas/CN weight; outside [0, 1] the sweeps silently overflow
+        if not 0.0 <= theta <= 1.0:
+            raise ValueError(f"theta must be in [0, 1], got {theta}")
         dt = tau_new - tau_old
 
         F0V = self._F0(V)
@@ -227,7 +230,8 @@ class ADISolver:
             tau_new = (n + 1) * self.dt
             tau_old = n * self.dt
             if verbose and (n % max(1, self.N // 10) == 0):
-                print(f"  step {n + 1}/{self.N}  tau={tau_new:.4f}")
+                # AGT: surface a mid-grid value so divergence shows up in the log
+                print(f"  step {n + 1}/{self.N}  tau={tau_new:.4f}  V[mid]={V[self.M // 2, self.L // 2]:.4f}")
             V = self.step(V, tau_old, tau_new, theta=theta)
 
         return V, self.S, self.v
