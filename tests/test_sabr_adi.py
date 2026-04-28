@@ -1,16 +1,16 @@
 """
-Tests for the SABR ADI solver — the centrepiece of the project.
+Tests for the SABR ADI solver.
 
-The strongest test here is the degenerate-limit check: setting beta=1 and
-nu->0 collapses SABR to Black-Scholes.  In this limit the ADI solver
-must reproduce the closed-form BS price.  This single test exercises
-essentially every line of the ADI code — the boundary conditions, the
-mixed-derivative term, the Thomas solver, the time stepping, the bilinear
-interpolation — and would catch almost any real bug.
+Automates the BS-limit and parity checks from notebook 07_sabr_adi.ipynb
+(section 8, "Accuracy Validation") plus a coarse-vs-fine grid sanity check.
 
-The remaining tests cover put-call parity (still holds for any solver of
-any model), a convergence sanity check, and validation of SABRParams,
-which has a non-trivial __post_init__ branch for each parameter.
+The degenerate-limit check (beta=1, nu->0 collapses SABR to Black-Scholes)
+exercises essentially every line of the ADI code — boundary conditions,
+mixed-derivative term, Thomas solver, time stepping, bilinear interpolation
+— and is the single highest-value regression check in the suite.
+
+Also covers SABRParams.__post_init__ validation, which has a branch per
+parameter and isn't exercised by any notebook.
 """
 
 import numpy as np
