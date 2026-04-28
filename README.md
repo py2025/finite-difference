@@ -15,8 +15,6 @@ European call and put options under the SABR model — a four-parameter (α, β,
 pip install mafn-finite-difference
 ```
 
-(`mafn-finite-difference` is a temporary placeholder for the published PyPI name.)
-
 ## Quick start
 
 ```python
