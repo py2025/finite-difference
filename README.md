@@ -1,81 +1,77 @@
 # finite-difference
 
-Finite-difference option pricing in 1-D (Black–Scholes) and 2-D (SABR stochastic volatility), with a Douglas-scheme ADI solver for the SABR PDE.
+Finite-difference option pricing for the SABR stochastic-volatility model via the **Douglas-scheme ADI method** of in 't Hout & Foulon (2010).
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/py2025/finite-difference/blob/master/notebooks/07_sabr_adi.ipynb)
+> in 't Hout, K., & Foulon, S. (2010). ADI finite difference schemes for option pricing in the Heston model with correlation.
+> *International Journal of Numerical Analysis and Modeling*, 7(2), 303–320.
 
 ## What it solves
 
-European call and put options under either the Black–Scholes model (constant volatility) or the SABR model (stochastic volatility, with parameters α, β, ρ, ν). The Black–Scholes case is solved with explicit, implicit, and Crank–Nicolson schemes; the SABR case is a 2-D PDE solved by an Alternating Direction Implicit (ADI) method using Douglas operator splitting. The SABR solver reproduces a Black–Scholes price to machine-noise levels in the degenerate limit and converges at the expected second-order rate.
+European call and put options under the SABR model — a four-parameter (α, β, ρ, ν) stochastic-volatility framework — whose pricing PDE is two-dimensional and has no closed form. The package solves that PDE on a Cartesian (S, v, t) grid using the Douglas Alternating Direction Implicit scheme: implicit sweeps in S and v are alternated each step, with the cross-derivative term handled explicitly. One-dimensional Black–Scholes solvers (explicit, implicit, Crank–Nicolson, American) ship as baselines and as the validation reference for the SABR limit.
 
 ## Installation
 
 ```bash
-git clone https://github.com/py2025/finite-difference.git
-cd finite-difference
-pip install -r requirements.txt
+pip install mafn-finite-difference
 ```
 
-Requires Python 3.8+ with NumPy, SciPy, Matplotlib, and Jupyter (for notebooks).
+(`mafn-finite-difference` is a temporary placeholder for the published PyPI name.)
 
 ## Quick start
 
 ```python
 from src.solvers.adi import price_sabr_option
 
-# SABR call: alpha=0.2, beta=1, rho=-0.3, nu=0.4
+# 1-year ATM SABR call: alpha=0.2, beta=1, rho=-0.3, nu=0.4
 price, V, S, v = price_sabr_option(
-    S0=100, K=100, T=1.0, r=0.05,
+    S0=100.0, K=100.0, T=1.0, r=0.05,
     alpha=0.2, beta=1.0, rho=-0.3, nu=0.4,
     option_type="call",
 )
 print(f"SABR call price: {price:.5f}")
 ```
 
-```python
-from src.solvers.crank_nicolson import solve_crank_nicolson
-
-# 1-D Black-Scholes call via Crank-Nicolson
-S, V = solve_crank_nicolson(
-    S_max=300, K=100, r=0.05, sigma=0.2, T=1.0,
-    M=200, N=200, option_type="call",
-)
-```
-
 ## API reference
 
-### `price_sabr_option(...) -> (price, V, S, v)`
+### `price_sabr_option(S0, K, T, r, alpha, beta, rho, nu, ...) -> (price, V, S, v)`
 
-High-level SABR pricer. Builds the grid, runs the Douglas-ADI solver, and bilinearly interpolates the price at `(S0, alpha)`.
+High-level pricer. Builds the (S, v, t) grid, runs the Douglas-ADI sweeps, and bilinearly interpolates the value at `(S0, alpha)`.
 
-| Argument | Type | Description |
-|---|---|---|
-| `S0` | float | Initial asset price |
-| `K` | float | Strike |
-| `T` | float | Time to maturity (years) |
-| `r` | float | Risk-free rate |
-| `alpha` | float | SABR initial vol level (>0) |
-| `beta` | float | SABR CEV exponent, in `[0, 1]` |
-| `rho` | float | SABR correlation, in `[-1, 1]` |
-| `nu` | float | SABR vol-of-vol (>0) |
-| `M`, `L`, `N` | int | Grid points in S, v, time (default 80/40/80) |
-| `S_max`, `v_max` | float, optional | Domain bounds (sensible defaults) |
-| `option_type` | str | `"call"` or `"put"` |
-| `theta` | float | ADI weight; 0.5 gives second-order accuracy |
-| `verbose` | bool | Print per-step progress |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `S0` | `float` | Initial asset price |
+| `K` | `float` | Strike |
+| `T` | `float` | Time to maturity (years) |
+| `r` | `float` | Risk-free rate |
+| `alpha` | `float` | Initial SABR vol level (>0) |
+| `beta` | `float` | CEV exponent in `[0, 1]` |
+| `rho` | `float` | Correlation in `[-1, 1]` |
+| `nu` | `float` | Vol-of-vol (>0) |
+| `M`, `L`, `N` | `int` | Grid points in S, v, t (default 80 / 40 / 80) |
+| `S_max`, `v_max` | `float`, optional | Domain bounds (sensible defaults) |
+| `option_type` | `str` | `"call"` or `"put"` |
+| `theta` | `float` | ADI weight; `0.5` is second-order accurate |
+| `verbose` | `bool` | Print per-step progress |
 
-Returns `(price: float, V: ndarray (M+1, L+1), S: ndarray, v: ndarray)`.
+Returns:
 
-### `ADISolver`
+| Field | Type | Description |
+|-------|------|-------------|
+| `price` | `float` | Bilinearly-interpolated value at `(S0, alpha)` |
+| `V` | `(M+1, L+1)` array | Full price surface at `t = 0` |
+| `S` | `(M+1,)` array | Asset-price grid |
+| `v` | `(L+1,)` array | Volatility grid |
 
-Lower-level access to the solver. `ADISolver(sabr, grid, K, r, T, option_type)` then `solver.solve(theta=0.5, verbose=False)` returns `(V, S, v)`. Useful when you want the full surface and not just the interpolated price at one point.
+### `ADISolver(sabr, grid, K, r, T, option_type)`
+
+Lower-level access. Call `solve(theta=0.5, verbose=False)` to get the full `(V, S, v)` surface — useful when you need the surface, not just one interpolated price.
 
 ### 1-D Black–Scholes solvers
 
-All in `src/solvers/`. Each takes `(S_max, K, r, sigma, T, M, N, option_type)` and returns `(S, V)` where `V` is the value at `t=0` on the asset grid.
+In `src/solvers/`. Each takes `(S_max, K, r, sigma, T, M, N, option_type)` and returns `(S, V)` at `t = 0`.
 
 | Function | Module | Notes |
-|---|---|---|
+|----------|--------|-------|
 | `solve_explicit` | `explicit` | CFL-limited; fastest per step |
 | `solve_implicit` | `implicit` | Unconditionally stable, O(Δt) |
 | `solve_crank_nicolson` | `crank_nicolson` | Unconditionally stable, O(Δt²) |
@@ -83,14 +79,14 @@ All in `src/solvers/`. Each takes `(S_max, K, r, sigma, T, M, N, option_type)` a
 
 ### `bs_price(S, K, T, r, sigma, option_type) -> float`
 
-Closed-form Black–Scholes price; used as the validation reference for the SABR solver in its degenerate limit.
-
-## Demo notebook
-
-The full SABR/ADI tutorial — derivation, solver, surface plots, convergence study, parity check, parameter sensitivity, and the implied-volatility smile — is in [`notebooks/07_sabr_adi.ipynb`](notebooks/07_sabr_adi.ipynb).
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/py2025/finite-difference/blob/master/notebooks/07_sabr_adi.ipynb)
+Closed-form Black–Scholes price; the validation reference for the SABR solver in its β = 1, ν → 0 limit.
 
 ## License
 
 MIT.
+
+## Demo notebook
+
+Full SABR/ADI tutorial — derivation, solver, surface plots, convergence study, parity check, parameter sensitivity, and the implied-volatility smile — is in [`notebooks/07_sabr_adi.ipynb`](notebooks/07_sabr_adi.ipynb).
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/py2025/finite-difference/blob/AGT_v0/notebooks/07_sabr_adi.ipynb)
