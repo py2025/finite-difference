@@ -1,6 +1,6 @@
 # finite-difference
 
-Finite-difference option pricing for the SABR stochastic-volatility model via the **Douglas-scheme ADI method** of in 't Hout & Foulon (2010).
+Finite-difference option pricing for the SABR stochastic-volatility model via the **Douglas-scheme ADI method** of von Sydow et al. (2010).
 
 > von Sydow et al. (2010). ADI finite difference schemes for option pricing in the Heston model with correlation.
 > *International Journal of Numerical Analysis and Modeling*, 7(2), 303–320.
