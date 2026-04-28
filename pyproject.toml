@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mafn-finite-difference"
-version = "0.1.1"
+version = "0.1.2"
 description = "Finite-difference option pricing in 1-D (Black-Scholes) and 2-D (SABR) with a Douglas-scheme ADI solver."
 readme = "README.md"
 license-files = ["LICENSE"]
