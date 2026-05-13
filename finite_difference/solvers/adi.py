@@ -77,15 +77,25 @@ class ADISolver:
         S_col = self.S[:, None]   # (M+1, 1)
         v_row = self.v[None, :]   # (1, L+1)
 
+        if self.grid.S_min < 0.0 and beta != 0.0:
+            raise ValueError("Negative stock grids are currently only supported for beta=0")
+
+        if beta == 0.0:
+            S_beta = np.ones_like(S_col)
+            S_2beta = np.ones_like(S_col)
+        else:
+            S_beta = S_col ** beta
+            S_2beta = S_col ** (2.0 * beta)
+
         # F1 (S-direction)
-        self.aS = 0.5 * (v_row ** 2) * (S_col ** (2.0 * beta))   # (M+1, L+1)
-        self.bS = self.r * self.S                                # (M+1,)
+        self.aS = 0.5 * (v_row ** 2) * S_2beta
+        self.bS = self.r * self.S
 
         # F2 (v-direction)
-        self.aV = 0.5 * (nu ** 2) * (self.v ** 2)                # (L+1,)
+        self.aV = 0.5 * (nu ** 2) * (self.v ** 2)
 
         # F0 (mixed)
-        self.gamma = rho * nu * (v_row ** 2) * (S_col ** beta)   # (M+1, L+1)
+        self.gamma = rho * nu * (v_row ** 2) * S_beta
 
     def payoff(self, S):
         S = np.asarray(S, dtype=float)
@@ -324,8 +334,8 @@ def suggest_sabr_grid_boundaries(
     """
     if S0 <= 0:
         raise ValueError("S0 must be positive")
-    if K <= 0:
-        raise ValueError("K must be positive")
+    if K < 0:
+        raise ValueError("K must be nonnegative")
     if T < 0:
         raise ValueError("T must be nonnegative")
     if alpha <= 0:
@@ -373,6 +383,7 @@ def price_sabr_option(
     N=80,
     v_max=None,
     S_max=None,
+    S_min=None,
     option_type="call",
     theta=0.5,
     verbose=False,
@@ -393,24 +404,35 @@ def price_sabr_option(
 
     if S_max is None or v_max is None:
         auto_S_max, auto_v_max = suggest_sabr_grid_boundaries(
-        S0=S0,
-        K=K,
-        T=T,
-        alpha=alpha,
-        beta=beta,
-        nu=nu,
-    )
+            S0=S0,
+            K=K,
+            T=T,
+            alpha=alpha,
+            beta=beta,
+            nu=nu,
+        )
 
-    if S_max is None:
-        S_max = auto_S_max
-    if v_max is None:
-        v_max = auto_v_max
+        if S_max is None:
+            S_max = auto_S_max
+        if v_max is None:
+            v_max = auto_v_max
+
+    if S_min is None:
+        if beta == 0.0:
+            price_scale = alpha * np.sqrt(max(T, 0.0))
+            S_min = min(0.0, S0 - 5.0 * price_scale)
+        else:
+            S_min = 0.0
+
+    if beta == 0.0:
+        normal_sabr_v_max = alpha * np.exp(2.5 * nu * np.sqrt(max(T, 0.0)))
+        v_max = max(v_max, normal_sabr_v_max)
 
     if alpha > v_max:
         raise ValueError(f"alpha={alpha} exceeds v_max={v_max}")
 
     sabr = SABRParams(alpha=alpha, beta=beta, rho=rho, nu=nu)
-    grid = Grid2DParams(S_max=S_max, v_max=v_max, M=M, L=L, N=N)
+    grid = Grid2DParams(S_max=S_max, v_max=v_max, M=M, L=L, N=N, S_min=S_min)
     solver = ADISolver(sabr, grid, K=K, r=r, T=T, option_type=option_type)
 
     if verbose:

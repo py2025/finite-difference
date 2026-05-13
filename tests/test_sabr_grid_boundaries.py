@@ -57,7 +57,6 @@ def test_sabr_grid_boundaries_respect_beta_zero_price_scale():
     "bad_kwargs",
     [
         {"S0": 0.0},
-        {"K": 0.0},
         {"T": -1.0},
         {"alpha": 0.0},
         {"nu": 0.0},

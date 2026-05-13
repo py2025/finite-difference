@@ -42,6 +42,7 @@ class Grid2DParams:
     M: int  # asset price steps
     L: int  # volatility steps
     N: int  # time steps
+    S_min: float = 0.0
 
 # Assertions
 def validate_option_params(opt: OptionParams) -> None:
@@ -67,8 +68,8 @@ def validate_grid_params(grid: GridParams) -> None:
         raise ValueError("N >= 1")
 
 def validate_grid2d_params(grid: Grid2DParams) -> None:
-    if grid.S_max <= 0:
-        raise ValueError("S_max > 0")
+    if grid.S_max <= grid.S_min:
+        raise ValueError("S_max must be greater than S_min")
     if grid.v_max <= 0:
         raise ValueError("v_max > 0")
     if grid.M < 2:
@@ -90,16 +91,16 @@ def dt(opt: OptionParams, grid: GridParams) -> float:
 
 # 2D Grid Builders (for SABR model)
 def make_stock_grid_2d(grid: Grid2DParams) -> np.ndarray:
-    """Stock price grid for 2D problems"""
-    return np.linspace(0.0, grid.S_max, grid.M + 1)
+    """Stock price grid for 2D problems."""
+    return np.linspace(grid.S_min, grid.S_max, grid.M + 1)
 
 def make_vol_grid_2d(grid: Grid2DParams) -> np.ndarray:
     """Volatility grid for 2D problems"""
     return np.linspace(0.0, grid.v_max, grid.L + 1)
 
 def ds_2d(grid: Grid2DParams) -> float:
-    """Stock price grid spacing"""
-    return grid.S_max / grid.M
+    """Stock price grid spacing."""
+    return (grid.S_max - grid.S_min) / grid.M
 
 def dv_2d(grid: Grid2DParams) -> float:
     """Volatility grid spacing"""
