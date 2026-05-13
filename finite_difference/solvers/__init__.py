@@ -3,6 +3,7 @@ from .implicit import solve_implicit
 from .crank_nicolson import solve_crank_nicolson
 from .american import solve_american, binomial_american
 from .adi import ADISolver, price_sabr_option
+from .heston import ExtendedHestonParams, ExtendedHestonADI, price_extended_heston_option
 
 __all__ = [
     "solve_explicit",
@@ -13,4 +14,7 @@ __all__ = [
     "binomial_american",
     "ADISolver",
     "price_sabr_option",
+    "ExtendedHestonParams",
+    "ExtendedHestonADI",
+    "price_extended_heston_option",
 ]

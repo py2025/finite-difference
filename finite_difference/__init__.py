@@ -14,6 +14,7 @@ from .solvers.implicit import solve_implicit
 from .solvers.crank_nicolson import solve_crank_nicolson
 from .solvers.american import solve_american, binomial_american
 from .solvers.adi import ADISolver, price_sabr_option, suggest_sabr_grid_boundaries
+from .solvers.heston import ExtendedHestonParams, ExtendedHestonADI, price_extended_heston_option
 
 __all__ = [
     "OptionParams",
