@@ -15,6 +15,10 @@ European call and put options under the SABR model — a four-parameter (α, β,
 pip install mafn-finite-difference
 ```
 
+### Version 0.2.0
+
+This release adds SABR benchmark validation, automatic SABR grid-boundary selection, and an Extended Heston ADI solver with package-level tests.
+
 ## Quick start
 
 ```python
