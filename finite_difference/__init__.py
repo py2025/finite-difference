@@ -13,7 +13,7 @@ from .solvers.explicit import solve_explicit, stability_limit
 from .solvers.implicit import solve_implicit
 from .solvers.crank_nicolson import solve_crank_nicolson
 from .solvers.american import solve_american, binomial_american
-from .solvers.adi import ADISolver, price_sabr_option
+from .solvers.adi import ADISolver, price_sabr_option, suggest_sabr_grid_boundaries
 
 __all__ = [
     "OptionParams",
@@ -32,4 +32,5 @@ __all__ = [
     "binomial_american",
     "ADISolver",
     "price_sabr_option",
+    "suggest_sabr_grid_boundaries",
 ]

@@ -269,6 +269,91 @@ def _thomas_batch(sub, mid, sup, rhs):
         x[i] = dp[i] - cp[i] * x[i + 1]
     return x
 
+def suggest_sabr_grid_boundaries(
+    S0,
+    K,
+    T,
+    alpha,
+    beta,
+    nu,
+    stock_std_mult=5.0,
+    min_stock_mult=4.0,
+    vol_mult=5.0,
+    vol_of_vol_mult=4.0,
+    min_v_max=1.0,
+):
+    """Suggest price and volatility grid boundaries for the SABR ADI solver.
+
+    The stock boundary is chosen using a simple CEV/SABR scale estimate
+
+        dS ~= alpha * S^beta * sqrt(T),
+
+    with a safety multiplier. We also keep the old rule of thumb
+
+        S_max >= 4 * max(S0, K)
+
+    so the boundary remains safely above spot and strike.
+
+    The volatility boundary keeps the old rule
+
+        v_max >= 5 * alpha,
+
+    and expands when vol-of-vol or maturity is large.
+
+    Parameters
+    ----------
+    S0 : float
+        Initial underlying price.
+    K : float
+        Strike.
+    T : float
+        Time to maturity.
+    alpha : float
+        Initial SABR volatility level.
+    beta : float
+        SABR beta parameter.
+    nu : float
+        Volatility of volatility.
+
+    Returns
+    -------
+    S_max : float
+        Suggested upper stock boundary.
+    v_max : float
+        Suggested upper volatility boundary.
+    """
+    if S0 <= 0:
+        raise ValueError("S0 must be positive")
+    if K <= 0:
+        raise ValueError("K must be positive")
+    if T < 0:
+        raise ValueError("T must be nonnegative")
+    if alpha <= 0:
+        raise ValueError("alpha must be positive")
+    if nu <= 0:
+        raise ValueError("nu must be positive")
+    if not (0.0 <= beta <= 1.0):
+        raise ValueError("beta must be in [0, 1]")
+
+    S_ref = max(S0, K)
+    sqrt_T = np.sqrt(max(T, 0.0))
+
+    # Approximate one-standard-deviation price scale under SABR/CEV.
+    price_scale = alpha * (S_ref ** beta) * sqrt_T
+
+    S_max = max(
+        min_stock_mult * S_ref,
+        S_ref + stock_std_mult * price_scale,
+    )
+
+    # Volatility grid should include alpha and leave room for vol-of-vol growth.
+    v_max = max(
+        min_v_max,
+        vol_mult * alpha,
+        alpha * (1.0 + vol_of_vol_mult * nu * sqrt_T),
+    )
+
+    return float(S_max), float(v_max)
 
 # ----------------------------------------------------------------------
 # High-level pricing API
@@ -305,10 +390,22 @@ def price_sabr_option(
     v : ndarray, shape (L+1,)
         Volatility grid.
     """
+
+    if S_max is None or v_max is None:
+        auto_S_max, auto_v_max = suggest_sabr_grid_boundaries(
+        S0=S0,
+        K=K,
+        T=T,
+        alpha=alpha,
+        beta=beta,
+        nu=nu,
+    )
+
     if S_max is None:
-        S_max = max(4.0 * K, 4.0 * S0)
+        S_max = auto_S_max
     if v_max is None:
-        v_max = max(5.0 * alpha, 1.0)
+        v_max = auto_v_max
+
     if alpha > v_max:
         raise ValueError(f"alpha={alpha} exceeds v_max={v_max}")
 
